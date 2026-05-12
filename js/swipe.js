@@ -1,6 +1,6 @@
 // ===== SWIPE CARDS =====
 (function() {
-  var THRESHOLD   = 65;
+  var THRESHOLD   = 160;
   var SNAP_DELETE = 88;
   var SNAP_STATUS = 224;
 
@@ -32,8 +32,8 @@
       var dyNow = y - startY;
 
       if(isH === null) {
-        if(Math.abs(dxNow) > 6 || Math.abs(dyNow) > 6) {
-          isH = Math.abs(dxNow) > Math.abs(dyNow);
+        if(Math.abs(dxNow) > 18 || Math.abs(dyNow) > 18) {
+          isH = Math.abs(dxNow) > Math.abs(dyNow) * 2;
           if(!isH) { dragging = false; return; }
         }
         return;
