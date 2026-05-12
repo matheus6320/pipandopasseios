@@ -1,5 +1,122 @@
 // ===== PAINEL CONFIGURAR ATIVIDADES =====
 
+var _popupAtivId = null;
+
+// ===== POPUP ATIVIDADE =====
+
+function abrirPopupAtividade(aid) {
+  _popupAtivId = aid;
+  const i = atividades.findIndex(a => a.id === aid);
+  if(i < 0) return;
+  _renderPopupAtivContent(aid, i);
+  document.getElementById('popup-ativ-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function _renderPopupAtivContent(aid, i) {
+  const a = atividades[i];
+  if(!a.tipos || !a.tipos.length) a.tipos = [{nome:'Adulto', valor:a.preco||0, sinalModo:'fixo', sinalValor:0}];
+  a.tipos.forEach(t => { if(!t.sinalModo) t.sinalModo='fixo'; if(t.sinalValor===undefined) t.sinalValor=0; });
+  if(!a.taxasNew) a.taxasNew = (a.taxas||[]).map(tx=>({ id:uid(), nome:tx.nome, tipos: a.tipos.map(t=>({nome:t.nome,modo:'fixo',valor:tx.valor||0})) }));
+
+  document.getElementById('popup-ativ-title').textContent = a.nome || 'Editar atividade';
+
+  document.getElementById('popup-ativ-content').innerHTML = `
+    <div class="acc-section">
+      <div class="acc-section-title">Nome</div>
+      <input class="acc-link-input" value="${esc(a.nome)}" placeholder="Nome da atividade"
+        oninput="atividades[${i}].nome=this.value;document.getElementById('popup-ativ-title').textContent=this.value||'Atividade';renderSelectGrid()" style="margin-bottom:0">
+    </div>
+    <div class="acc-section">
+      <div class="acc-section-title">👥 Tipos de passageiro</div>
+      <div id="acc-tipos-${aid}">
+        ${renderTiposAcc(a.tipos, i, a.sinalAtivo, aid)}
+      </div>
+      <button class="acc-add-tipo" data-aid="${aid}" onclick="adicionarTipoById(this.dataset.aid)">＋ Adicionar tipo</button>
+    </div>
+    <div class="acc-section">
+      <div class="acc-toggle-row">
+        <label class="toggle-wrap">
+          <input type="checkbox" ${a.sinalAtivo ? 'checked' : ''}
+            onchange="atividades[${i}].sinalAtivo=this.checked;_reRenderPopupAtiv()">
+          <span class="toggle-slider"></span>
+        </label>
+        <span class="toggle-label">Cobrar sinal desta atividade</span>
+      </div>
+    </div>
+    <div class="acc-section">
+      <div class="acc-section-title">📋 Taxas adicionais</div>
+      <div id="acc-taxas-${aid}">
+        ${renderTaxasNew(a.taxasNew||[], a.tipos, i)}
+      </div>
+      <button class="acc-add-tipo" onclick="adicionarTaxaNew(${i})">＋ Adicionar taxa</button>
+    </div>
+    <div class="acc-section">
+      <div class="acc-section-title">⭐ Extras e adicionais</div>
+      <div id="acc-extras-${aid}"></div>
+      <button class="acc-add-tipo" data-aid="${aid}" onclick="adicionarExtra(this.dataset.aid)">＋ Adicionar extra</button>
+    </div>
+    <div class="acc-section">
+      <div class="acc-section-title">📅 Períodos especiais</div>
+      <div id="acc-periodos-${aid}"></div>
+      <button class="acc-add-tipo" data-aid="${aid}" onclick="adicionarPeriodo(this.dataset.aid)">＋ Adicionar período</button>
+    </div>
+    <div class="acc-section">
+      <div class="acc-section-title">📸 Link de mídia</div>
+      <input class="acc-link-input" type="url" value="${esc(a.linkMidia||'')}"
+        placeholder="https://youtube.com/..."
+        oninput="atividades[${i}].linkMidia=this.value">
+    </div>
+  `;
+  renderExtrasBox(aid, i);
+  _renderPeriodosBox(aid, i);
+}
+
+function _reRenderPopupAtiv() {
+  if(!_popupAtivId) return;
+  const i = atividades.findIndex(a => a.id === _popupAtivId);
+  if(i < 0) return;
+  const content = document.getElementById('popup-ativ-content');
+  const scrollTop = content ? content.scrollTop : 0;
+  _renderPopupAtivContent(_popupAtivId, i);
+  if(content) content.scrollTop = scrollTop;
+}
+
+function fecharPopupAtividade() {
+  _popupAtivId = null;
+  document.getElementById('popup-ativ-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+async function salvarPopupAtividade() {
+  if(!_popupAtivId) return;
+  const i = atividades.findIndex(a => a.id === _popupAtivId);
+  if(i < 0) return;
+  const btn = document.getElementById('popup-ativ-save-btn');
+  if(btn) { btn.textContent = '⏳ Salvando...'; btn.disabled = true; }
+  salvar();
+  try { await upsertAtividadeDB(atividades[i]); } catch(e) { console.error(e); }
+  renderConfig();
+  renderSelectGrid();
+  fecharPopupAtividade();
+}
+
+async function _deletarPopupAtiv() {
+  if(!_popupAtivId) return;
+  if(!confirm('Remover esta atividade?')) return;
+  const idx = atividades.findIndex(a => a.id === _popupAtivId);
+  if(idx < 0) return;
+  const aid = _popupAtivId;
+  fecharPopupAtividade();
+  atividades.splice(idx, 1);
+  salvar();
+  excluirAtividadeDB(aid).catch(console.error);
+  renderConfig();
+  renderSelectGrid();
+}
+
+// ===== LISTA DE ATIVIDADES =====
+
 function salvarConfigManual() {
   salvar();
   const btn = document.getElementById('btn-salvar-config');
@@ -11,59 +128,14 @@ function salvarConfigManual() {
   }, 2200);
 }
 
-function toggleAcc(id) {
-  const body = document.getElementById('acc-body-'+id);
-  if(!body) return;
-  const isOpen = body.classList.contains('open');
-  document.querySelectorAll('.acc-body').forEach(b => b.classList.remove('open'));
-  document.querySelectorAll('.acc-item').forEach(el => el.classList.remove('acc-open'));
-  if(!isOpen) {
-    body.classList.add('open');
-    const item = body.closest('.acc-item');
-    if(item) item.classList.add('acc-open');
-  }
-}
-
-async function salvarAcc(id, btnId) {
-  const idx = typeof id === 'number' ? id : atividades.findIndex(a => a.id === id);
-  const aid = idx >= 0 ? atividades[idx].id : null;
-
-  const btnBefore = document.getElementById(btnId);
-  if(btnBefore) { btnBefore.textContent = '⏳ Salvando...'; btnBefore.disabled = true; }
-
-  salvar();
-  try { if(aid) await upsertAtividadeDB(atividades[idx]); } catch(e) { console.error(e); }
-
-  renderConfig();
-  renderSelectGrid();
-  setTimeout(() => {
-    if(aid) {
-      const body = document.getElementById('acc-body-'+aid);
-      if(body) {
-        body.classList.add('open');
-        const item = body.closest('.acc-item');
-        if(item) item.classList.add('acc-open');
-      }
-    }
-    const btn = document.getElementById(btnId);
-    if(btn) {
-      btn.textContent = '✅ Salvo!';
-      btn.classList.add('saved');
-      setTimeout(() => { if(btn) { btn.textContent = '💾 Salvar'; btn.classList.remove('saved'); } }, 1800);
-    }
-  }, 50);
-}
-
 function renderConfig() {
   const list = document.getElementById('ativ-list');
   list.innerHTML = '';
   atividades.forEach((a, i) => {
-    if(!a.tipos || !a.tipos.length) a.tipos = [{nome:'Adulto', valor:a.preco||0, sinalModo:'fixo', sinalValor:a.sinal||0}];
+    if(!a.tipos || !a.tipos.length) a.tipos = [{nome:'Adulto', valor:a.preco||0, sinalModo:'fixo', sinalValor:0}];
     a.tipos.forEach(t => { if(!t.sinalModo) t.sinalModo='fixo'; if(t.sinalValor===undefined) t.sinalValor=0; });
     if(!a.taxasNew) a.taxasNew = (a.taxas||[]).map(tx=>({ id:uid(), nome:tx.nome, tipos: a.tipos.map(t=>({nome:t.nome,modo:'fixo',valor:tx.valor||0})) }));
 
-    const badgeTxt = a.tipos.length + ' tipo' + (a.tipos.length>1?'s':'');
-    const saveBtnId = 'acc-save-'+a.id;
     const precoSummary = a.tipos.map(t => `${esc(t.nome)}: R$ ${(t.valor||0).toFixed(0)}`).join(' · ');
 
     const card = document.createElement('div');
@@ -79,59 +151,14 @@ function renderConfig() {
             <div style="font-size:0.6rem;color:var(--mid);font-weight:700;margin-top:2px">${precoSummary}</div>
           </div>
         </div>
-        <button class="acc-edit-btn" data-aid="${a.id}" onclick="toggleAcc(this.dataset.aid)">✏️ Editar</button>
-      </div>
-      <div class="acc-body" id="acc-body-${a.id}">
-        <div class="acc-section">
-          <div class="acc-section-title">Nome</div>
-          <input class="acc-link-input" value="${esc(a.nome)}" placeholder="Nome da atividade"
-            oninput="atividades[${i}].nome=this.value;renderSelectGrid()" style="margin-bottom:0">
-        </div>
-        <div class="acc-section">
-          <div class="acc-section-title">👥 Tipos de passageiro</div>
-          <div id="acc-tipos-${a.id}">
-            ${renderTiposAcc(a.tipos, i, a.sinalAtivo, a.id)}
-          </div>
-          <button class="acc-add-tipo" data-aid="${a.id}" onclick="adicionarTipoById(this.dataset.aid)">＋ Adicionar tipo</button>
-        </div>
-        <div class="acc-section">
-          <div class="acc-toggle-row">
-            <label class="toggle-wrap">
-              <input type="checkbox" ${a.sinalAtivo ? 'checked' : ''}
-                onchange="atividades[${i}].sinalAtivo=this.checked;renderConfig()">
-              <span class="toggle-slider"></span>
-            </label>
-            <span class="toggle-label">Cobrar sinal desta atividade</span>
-          </div>
-        </div>
-        <div class="acc-section">
-          <div class="acc-section-title">📋 Taxas adicionais</div>
-          <div id="acc-taxas-${a.id}">
-            ${renderTaxasNew(a.taxasNew||[], a.tipos, i)}
-          </div>
-          <button class="acc-add-tipo" onclick="adicionarTaxaNew(${i})">＋ Adicionar taxa</button>
-        </div>
-        <div class="acc-section">
-          <div class="acc-section-title">⭐ Extras e adicionais</div>
-          <div id="acc-extras-${a.id}"></div>
-          <button class="acc-add-tipo" data-aid="${a.id}" onclick="adicionarExtra(this.dataset.aid)">＋ Adicionar extra</button>
-        </div>
-        <div class="acc-section">
-          <div class="acc-section-title">📸 Link de mídia</div>
-          <input class="acc-link-input" type="url" value="${esc(a.linkMidia||'')}"
-            placeholder="https://youtube.com/..."
-            oninput="atividades[${i}].linkMidia=this.value">
-        </div>
-        <div class="acc-footer">
-          <button class="acc-btn-del" data-aid="${a.id}" onclick="removerAtividade(this.dataset.aid)">🗑 Remover</button>
-          <button class="acc-btn-save" id="${saveBtnId}" data-aid="${a.id}" onclick="salvarAcc(this.dataset.aid,this.id)">💾 Salvar</button>
-        </div>
+        <button class="acc-edit-btn" data-aid="${a.id}" onclick="abrirPopupAtividade(this.dataset.aid)">✏️ Editar</button>
       </div>
     `;
     list.appendChild(card);
-    renderExtrasBox(a.id, i);
   });
 }
+
+// ===== FORMULÁRIO INTERNO =====
 
 function renderExtrasBox(aid, idx) {
   var container = document.getElementById('acc-extras-' + aid);
@@ -266,7 +293,7 @@ function calcSinalTipo(t) {
 
 function setTipoModo(i, j, campo, valor) {
   atividades[i].tipos[j][campo] = valor;
-  renderConfig();
+  _reRenderPopupAtiv();
 }
 
 function renderTaxasNew(taxas, tipos, i) {
@@ -304,7 +331,7 @@ function setTaxaTipoModo(i, j, nomeT, modo) {
   let entry = tx.tipos.find(x=>x.nome===nomeT);
   if(!entry) { entry = {nome:nomeT,modo:'fixo',valor:0}; tx.tipos.push(entry); }
   entry.modo = modo;
-  renderConfig();
+  _reRenderPopupAtiv();
 }
 
 function setTaxaTipoValor(i, j, nomeT, val) {
@@ -321,78 +348,20 @@ function adicionarTaxaNew(i) {
     id: uid(), nome: 'Nova Taxa',
     tipos: tipos.map(t=>({nome:t.nome, modo:'fixo', valor:0}))
   });
-  const aid = atividades[i].id;
-  renderConfig();
-  setTimeout(() => {
-    const body = document.getElementById('acc-body-'+aid);
-    if(body) { body.classList.add('open'); const item = body.closest('.acc-item'); if(item) item.classList.add('acc-open'); }
-  }, 50);
+  _reRenderPopupAtiv();
 }
 
 async function removerTaxaNew(i, j) {
-  if(!confirm('Remover esta taxa? A alteração será salva automaticamente.')) return;
-  const aid = atividades[i].id;
+  if(!confirm('Remover esta taxa?')) return;
   atividades[i].taxasNew.splice(j, 1);
-  salvar();
-  try { await upsertAtividadeDB(atividades[i]); } catch(e) { console.error(e); }
-  renderConfig();
-  setTimeout(() => {
-    const body = document.getElementById('acc-body-'+aid);
-    if(body) { body.classList.add('open'); const item = body.closest('.acc-item'); if(item) item.classList.add('acc-open'); }
-  }, 50);
-}
-
-function adicionarTaxa(i) {
-  atividades[i].taxas = atividades[i].taxas || [];
-  atividades[i].taxas.push({nome:'Taxa', valor: 0});
-  salvar(); renderConfig();
-}
-
-function removerTaxa(i, j) {
-  atividades[i].taxas.splice(j,1); salvar(); renderConfig();
-}
-
-function adicionarTipo(i) {
-  atividades[i].tipos.push({nome:'Novo Tipo', valor:0, sinalModo:'fixo', sinalValor:0});
-  salvar();
-  renderConfig();
-  const aid = atividades[i].id;
-  setTimeout(() => {
-    const body = document.getElementById('acc-body-'+aid);
-    if(body) { body.classList.add('open'); const item = body.closest('.acc-item'); if(item) item.classList.add('acc-open'); }
-  }, 50);
-}
-
-function removerTipo(i, j) {
-  if(atividades[i].tipos.length <= 1) { alert('É necessário ao menos 1 tipo de passageiro.'); return; }
-  atividades[i].tipos.splice(j, 1);
-  salvar();
-  renderConfig();
-  const aid = atividades[i].id;
-  setTimeout(() => {
-    const body = document.getElementById('acc-body-'+aid);
-    if(body) { body.classList.add('open'); const item = body.closest('.acc-item'); if(item) item.classList.add('acc-open'); }
-  }, 50);
-}
-
-function adicionarAtividade() {
-  const nova = { id: uid(), nome: 'Nova Atividade', tipos: [{nome:'Adulto', valor:0, sinalModo:'fixo', sinalValor:0}], sinalAtivo: false, taxasNew: [], extras: [], linkMidia: '' };
-  atividades.push(nova);
-  salvar();
-  upsertAtividadeDB(nova).catch(console.error);
-  renderConfig();
+  _reRenderPopupAtiv();
 }
 
 function adicionarTipoById(aid) {
   const i = atividades.findIndex(a => a.id === aid);
   if(i < 0) return;
   atividades[i].tipos.push({nome:'Novo Tipo', valor:0, sinalModo:'fixo', sinalValor:0});
-  salvar();
-  renderConfig();
-  setTimeout(() => {
-    const body = document.getElementById('acc-body-'+aid);
-    if(body) { body.classList.add('open'); const item = body.closest('.acc-item'); if(item) item.classList.add('acc-open'); }
-  }, 50);
+  _reRenderPopupAtiv();
 }
 
 function removerTipoById(aid, j) {
@@ -400,12 +369,126 @@ function removerTipoById(aid, j) {
   if(i < 0) return;
   if(atividades[i].tipos.length <= 1) { alert('É necessário ao menos 1 tipo de passageiro.'); return; }
   atividades[i].tipos.splice(j, 1);
-  salvar();
+  _reRenderPopupAtiv();
+}
+
+function adicionarAtividade() {
+  const nova = { id: uid(), nome: 'Nova Atividade', tipos: [{nome:'Adulto', valor:0, sinalModo:'fixo', sinalValor:0}], sinalAtivo: false, taxasNew: [], extras: [], linkMidia: '' };
+  atividades.push(nova);
   renderConfig();
-  setTimeout(() => {
-    const body = document.getElementById('acc-body-'+aid);
-    if(body) { body.classList.add('open'); const item = body.closest('.acc-item'); if(item) item.classList.add('acc-open'); }
-  }, 50);
+  abrirPopupAtividade(nova.id);
+}
+
+// ===== PERÍODOS ESPECIAIS =====
+
+function _renderPeriodosBox(aid, idx) {
+  var container = document.getElementById('acc-periodos-' + aid);
+  if(!container) return;
+  container.innerHTML = '';
+  var a = atividades[idx];
+  if(!a) return;
+  if(!a.periodos) a.periodos = [];
+  if(a.periodos.length === 0) {
+    mkEl('div', {text:'Nenhum período especial cadastrado.', style:'font-size:0.65rem;color:#888;font-weight:700;margin-bottom:6px'}, container);
+    return;
+  }
+  a.periodos.forEach(function(p, j) {
+    var box = mkEl('div', {cls:'acc-periodo-box'}, container);
+
+    var hrow = mkEl('div', {cls:'acc-periodo-header'}, box);
+    var nomeIn = mkEl('input', {cls:'acc-extra-input', type:'text', placeholder:'Nome do período (ex: Carnaval)', value:p.nome||''}, hrow);
+    nomeIn.style.flex = '1';
+    nomeIn.addEventListener('input', (function(ii,jj){return function(){atividades[ii].periodos[jj].nome=this.value;};})(idx,j));
+    var delBtn = mkEl('button', {text:'✕', style:'background:none;border:none;color:#C05030;font-weight:900;cursor:pointer;font-size:0.9rem;flex-shrink:0'}, hrow);
+    delBtn.addEventListener('click', (function(aid2,jj){return function(){removerPeriodo(aid2,jj);};})(aid,j));
+
+    var drow = mkEl('div', {style:'display:flex;gap:6px;align-items:center;margin-top:8px'}, box);
+    mkEl('span', {text:'De', style:'font-size:0.65rem;font-weight:700;color:#7A6A5A;flex-shrink:0'}, drow);
+    var iniIn = mkEl('input', {type:'date', cls:'acc-extra-input', value:p.inicio||''}, drow);
+    iniIn.style.flex = '1';
+    iniIn.addEventListener('change', (function(ii,jj){return function(){atividades[ii].periodos[jj].inicio=this.value;};})(idx,j));
+    mkEl('span', {text:'até', style:'font-size:0.65rem;font-weight:700;color:#7A6A5A;flex-shrink:0'}, drow);
+    var fimIn = mkEl('input', {type:'date', cls:'acc-extra-input', value:p.fim||''}, drow);
+    fimIn.style.flex = '1';
+    fimIn.addEventListener('change', (function(ii,jj){return function(){atividades[ii].periodos[jj].fim=this.value;};})(idx,j));
+
+    mkEl('div', {text:'Preços neste período:', style:'font-size:0.65rem;font-weight:800;color:#185FA5;margin-top:10px;margin-bottom:4px'}, box);
+    a.tipos.forEach(function(t, k) {
+      var trow = mkEl('div', {style:'display:flex;align-items:center;gap:8px;margin-bottom:5px'}, box);
+      mkEl('span', {text:t.nome, style:'font-size:0.7rem;font-weight:700;color:var(--dark);min-width:70px'}, trow);
+      mkEl('span', {text:'R$', style:'font-size:0.7rem;font-weight:700;color:var(--mid)'}, trow);
+      var precoSalvo = (p.precos||[]).find(function(x){return x.nome===t.nome;});
+      var precoIn = mkEl('input', {type:'number', cls:'acc-extra-input', value: precoSalvo ? precoSalvo.valor : t.valor, placeholder:'0'}, trow);
+      precoIn.style.flex = '1';
+      precoIn.addEventListener('input', (function(ii,jj,tnome){return function(){
+        if(!atividades[ii].periodos[jj].precos) atividades[ii].periodos[jj].precos = [];
+        var entry = atividades[ii].periodos[jj].precos.find(function(x){return x.nome===tnome;});
+        if(entry) entry.valor = parseFloat(this.value)||0;
+        else atividades[ii].periodos[jj].precos.push({nome:tnome, valor:parseFloat(this.value)||0});
+      };})(idx,j,t.nome));
+    });
+
+    // Sinal do período
+    mkEl('div', {style:'border-top:1px dashed #B5D4F4;margin:10px 0 8px'}, box);
+    var sinalToggleRow = mkEl('div', {style:'display:flex;align-items:center;gap:8px;margin-bottom:6px'}, box);
+    var sinalChk = mkEl('input', {type:'checkbox'}, sinalToggleRow);
+    sinalChk.style.cssText = 'width:16px;height:16px;accent-color:#185FA5';
+    sinalChk.checked = !!p.cobrarSinal;
+    mkEl('span', {text:'Cobrar sinal neste período', style:'font-size:0.7rem;font-weight:700;color:var(--dark)'}, sinalToggleRow);
+
+    var sinalSection = mkEl('div', {style: p.cobrarSinal ? '' : 'display:none'}, box);
+    mkEl('div', {text:'Sinal por tipo:', style:'font-size:0.65rem;font-weight:800;color:#0F6E56;margin-bottom:6px'}, sinalSection);
+
+    a.tipos.forEach(function(t) {
+      var sinalSalvo = (p.sinalPrecos||[]).find(function(x){return x.nome===t.nome;}) || {sinalModo:'fixo',sinalValor:0};
+      var srow = mkEl('div', {style:'display:flex;align-items:center;gap:6px;margin-bottom:5px'}, sinalSection);
+      mkEl('span', {text:t.nome, style:'font-size:0.7rem;font-weight:700;color:var(--dark);min-width:70px'}, srow);
+      var tog = mkEl('div', {cls:'acc-extra-tog'}, srow);
+      var bF = mkEl('button', {text:'R$', cls:sinalSalvo.sinalModo==='fixo'?'ativo':''}, tog);
+      var bP = mkEl('button', {text:'%',  cls:sinalSalvo.sinalModo==='pct'?'ativo':''}, tog);
+      var svIn = mkEl('input', {type:'number', cls:'acc-extra-input', value:sinalSalvo.sinalValor||0, placeholder:'0'}, srow);
+      svIn.style.flex = '1';
+      bF.addEventListener('click', (function(ii,jj,tn,bf,bp){return function(){ _setSinalPeriodo(ii,jj,tn,'fixo'); bf.className='ativo'; bp.className=''; };})(idx,j,t.nome,bF,bP));
+      bP.addEventListener('click', (function(ii,jj,tn,bf,bp){return function(){ _setSinalPeriodo(ii,jj,tn,'pct');  bf.className=''; bp.className='ativo'; };})(idx,j,t.nome,bF,bP));
+      svIn.addEventListener('input', (function(ii,jj,tn){return function(){ _setSinalPeriodoValor(ii,jj,tn,parseFloat(this.value)||0); };})(idx,j,t.nome));
+    });
+
+    sinalChk.addEventListener('change', (function(ii,jj,ss){return function(){
+      atividades[ii].periodos[jj].cobrarSinal = this.checked;
+      ss.style.display = this.checked ? '' : 'none';
+    };})(idx,j,sinalSection));
+  });
+}
+
+function adicionarPeriodo(aid) {
+  var a = atividades.find(function(x){return x.id===aid;});
+  if(!a) return;
+  if(!a.periodos) a.periodos = [];
+  var precos = (a.tipos||[]).map(function(t){return {nome:t.nome, valor:t.valor||0};});
+  var sinalPrecos = (a.tipos||[]).map(function(t){return {nome:t.nome, sinalModo:t.sinalModo||'fixo', sinalValor:t.sinalValor||0};});
+  a.periodos.push({id:uid(), nome:'', inicio:'', fim:'', precos:precos, cobrarSinal:false, sinalPrecos:sinalPrecos});
+  _renderPeriodosBox(aid, atividades.indexOf(a));
+}
+
+function _setSinalPeriodo(ii, jj, tnome, modo) {
+  if(!atividades[ii].periodos[jj].sinalPrecos) atividades[ii].periodos[jj].sinalPrecos = [];
+  var entry = atividades[ii].periodos[jj].sinalPrecos.find(function(x){return x.nome===tnome;});
+  if(entry) entry.sinalModo = modo;
+  else atividades[ii].periodos[jj].sinalPrecos.push({nome:tnome, sinalModo:modo, sinalValor:0});
+}
+
+function _setSinalPeriodoValor(ii, jj, tnome, val) {
+  if(!atividades[ii].periodos[jj].sinalPrecos) atividades[ii].periodos[jj].sinalPrecos = [];
+  var entry = atividades[ii].periodos[jj].sinalPrecos.find(function(x){return x.nome===tnome;});
+  if(entry) entry.sinalValor = val;
+  else atividades[ii].periodos[jj].sinalPrecos.push({nome:tnome, sinalModo:'fixo', sinalValor:val});
+}
+
+function removerPeriodo(aid, j) {
+  var a = atividades.find(function(x){return x.id===aid;});
+  if(!a||!a.periodos) return;
+  a.periodos.splice(j,1);
+  _renderPeriodosBox(aid, atividades.indexOf(a));
 }
 
 function removerAtividade(id) {

@@ -17,6 +17,7 @@ carregarCotacoesDB().then(() => {
     setTimeout(pedirPermissaoNotificacoes, 3000);
   } else {
     verificarNotificacoes();
+    iniciarAgendamento();
   }
 }).catch(() => {
   atualizarBadge();

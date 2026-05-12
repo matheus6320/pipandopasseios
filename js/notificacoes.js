@@ -6,6 +6,11 @@ function _defaultNotifConfig() {
     passeiosAmanha:   true,
     passeiosSemana:   false,
     clientesQuentes:  false,
+    horarios: [
+      { hora: '08:00', ativo: true  },
+      { hora: '15:00', ativo: true  },
+      { hora: '19:00', ativo: true  },
+    ],
   };
 }
 
@@ -19,6 +24,46 @@ function carregarNotifConfig() {
 
 function _salvarNotifConfig(cfg) {
   localStorage.setItem('pipando_notif_config', JSON.stringify(cfg));
+}
+
+// ===== CONTROLE DE DISPAROS (evita repetir no mesmo dia) =====
+function _carregarDisparos() {
+  try { return JSON.parse(localStorage.getItem('pipando_notif_disparos') || '{}'); } catch { return {}; }
+}
+
+function _registrarDisparo(hora) {
+  const d = _carregarDisparos();
+  d[hora] = new Date().toISOString().slice(0, 10);
+  localStorage.setItem('pipando_notif_disparos', JSON.stringify(d));
+}
+
+function _jaDisparouHoje(hora) {
+  const d = _carregarDisparos();
+  return d[hora] === new Date().toISOString().slice(0, 10);
+}
+
+// ===== AGENDAMENTO =====
+var _agendamentoInterval = null;
+
+function iniciarAgendamento() {
+  if(_agendamentoInterval) clearInterval(_agendamentoInterval);
+  _agendamentoInterval = setInterval(_verificarHorarios, 30000);
+  _verificarHorarios();
+}
+
+function _verificarHorarios() {
+  if(statusPermissao() !== 'granted') return;
+  const cfg = carregarNotifConfig();
+  const horarios = cfg.horarios || [];
+  const agora = new Date();
+  const hhmm = String(agora.getHours()).padStart(2,'0') + ':' + String(agora.getMinutes()).padStart(2,'0');
+  horarios.forEach(function(h) {
+    if(!h.ativo || !h.hora) return;
+    if(h.hora !== hhmm) return;
+    if(_jaDisparouHoje(h.hora)) return;
+    _registrarDisparo(h.hora);
+    verificarNotificacoes();
+  });
 }
 
 // ===== PERMISSÃO =====
@@ -162,17 +207,36 @@ function renderNotifConfig() {
   _c('notif-amanha',    cfg.passeiosAmanha);
   _c('notif-semana',    cfg.passeiosSemana);
   _c('notif-quentes',   cfg.clientesQuentes);
+
+  // Preenche horários agendados
+  const horarios = cfg.horarios || _defaultNotifConfig().horarios;
+  horarios.forEach(function(h, i) {
+    const idx = i + 1;
+    const inputHora = document.getElementById('notif-hora-' + idx);
+    const inputAtivo = document.getElementById('notif-hora-' + idx + '-ativo');
+    if(inputHora)  inputHora.value   = h.hora  || '';
+    if(inputAtivo) inputAtivo.checked = !!h.ativo;
+  });
 }
 
 function salvarNotifConfigForm() {
   const _c = id => document.getElementById(id)?.checked ?? false;
+  const _v = id => (document.getElementById(id)?.value || '').trim();
+
+  const horarios = [1, 2, 3].map(function(i) {
+    return { hora: _v('notif-hora-' + i), ativo: _c('notif-hora-' + i + '-ativo') };
+  }).filter(function(h) { return h.hora; });
+
   const cfg = {
     followupVencido: _c('notif-followup'),
     passeiosAmanha:  _c('notif-amanha'),
     passeiosSemana:  _c('notif-semana'),
     clientesQuentes: _c('notif-quentes'),
+    horarios:        horarios,
   };
   _salvarNotifConfig(cfg);
+  iniciarAgendamento();
+
   const btn = document.getElementById('notif-salvar-btn');
   if(btn) {
     btn.textContent = '✅ Salvo!';

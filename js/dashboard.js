@@ -1,13 +1,82 @@
 // ===== DASHBOARD =====
 
 const _dashCharts = {};
+var _dashFiltro = 'tudo';
+
+function setDashFiltro(tipo) {
+  _dashFiltro = tipo;
+  document.querySelectorAll('#panel-dashboard .fnovo-per-btn').forEach(b => b.classList.remove('on'));
+  const btn = document.getElementById('dashf-' + tipo);
+  if(btn) btn.classList.add('on');
+  const ini = document.getElementById('dash-f-ini');
+  const fim = document.getElementById('dash-f-fim');
+  if(ini) ini.value = '';
+  if(fim) fim.value = '';
+  renderDashboard();
+}
+
+function setDashFiltroCustom() {
+  _dashFiltro = 'custom';
+  document.querySelectorAll('.dash-fchip').forEach(b => b.classList.remove('ativo'));
+  renderDashboard();
+}
+
+function _filtrarCotsDash(cots) {
+  const hoje = new Date();
+  if(_dashFiltro === 'tudo') return cots;
+  if(_dashFiltro === 'hoje') {
+    const ymd = hoje.toISOString().slice(0, 10);
+    return cots.filter(c => c.data && c.data.slice(0, 10) === ymd);
+  }
+  if(_dashFiltro === 'ontem') {
+    const ontem = new Date(hoje); ontem.setDate(ontem.getDate() - 1);
+    const ymd = ontem.toISOString().slice(0, 10);
+    return cots.filter(c => c.data && c.data.slice(0, 10) === ymd);
+  }
+  if(_dashFiltro === 'mes') {
+    const ym = hoje.getFullYear() + '-' + String(hoje.getMonth() + 1).padStart(2, '0');
+    return cots.filter(c => c.data && c.data.slice(0, 7) === ym);
+  }
+  if(_dashFiltro === 'mes-ant') {
+    const d = new Date(hoje.getFullYear(), hoje.getMonth() - 1, 1);
+    const ym = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+    return cots.filter(c => c.data && c.data.slice(0, 7) === ym);
+  }
+  if(_dashFiltro === 'ano') {
+    const y = String(hoje.getFullYear());
+    return cots.filter(c => c.data && c.data.slice(0, 4) === y);
+  }
+  if(_dashFiltro === 'custom') {
+    const ini = document.getElementById('dash-f-ini')?.value || '';
+    const fim = document.getElementById('dash-f-fim')?.value || '';
+    return cots.filter(c => {
+      if(!c.data) return false;
+      const cd = c.data.slice(0, 10);
+      if(ini && cd < ini) return false;
+      if(fim && cd > fim) return false;
+      return true;
+    });
+  }
+  return cots;
+}
+
+function _atualizarInfoFiltro(total, filtrado) {
+  const el = document.getElementById('dash-filter-info');
+  if(!el) return;
+  if(_dashFiltro === 'tudo') { el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  const labels = { hoje: 'hoje', ontem: 'ontem', mes: 'este mês', 'mes-ant': 'mês passado', ano: 'este ano', custom: 'período personalizado' };
+  el.textContent = `🔎 Exibindo ${filtrado} de ${total} cotações — ${labels[_dashFiltro] || ''}`;
+}
 
 function _destroyChart(key) {
   if(_dashCharts[key]) { _dashCharts[key].destroy(); delete _dashCharts[key]; }
 }
 
 function renderDashboard() {
-  const cots = carregarCotacoes();
+  const todasCots = carregarCotacoes();
+  const cots = _filtrarCotsDash(todasCots);
+  _atualizarInfoFiltro(todasCots.length, cots.length);
   _renderKPIs(cots);
   _renderChartPasseios(cots);
   _renderChartStatus(cots);

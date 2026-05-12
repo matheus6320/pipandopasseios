@@ -1,3 +1,24 @@
+// ===== PERÍODOS ESPECIAIS =====
+
+function _getPeriodoAtivo(a, dataISO) {
+  if(!a.periodos || !a.periodos.length || !dataISO) return null;
+  return a.periodos.find(function(p) {
+    return p.inicio && p.fim && dataISO >= p.inicio && dataISO <= p.fim;
+  }) || null;
+}
+
+function _verificarPeriodoPopup(aid, dataISO) {
+  const aviso = document.getElementById('popup-periodo-aviso');
+  if(!aviso) return;
+  if(!dataISO || !aid) { aviso.style.display = 'none'; return; }
+  const a = atividades.find(x => x.id === aid);
+  if(!a) { aviso.style.display = 'none'; return; }
+  const periodo = _getPeriodoAtivo(a, dataISO);
+  if(!periodo || !periodo.nome) { aviso.style.display = 'none'; return; }
+  aviso.style.display = 'block';
+  document.getElementById('popup-periodo-nome').textContent = 'Valores com alteração de período: ' + periodo.nome;
+}
+
 // ===== ORIGEM DO CLIENTE =====
 function setOrigem(val) {
   origemCliente = origemCliente === val ? null : val;
@@ -124,6 +145,7 @@ function abrirPopup(id) {
   if(btnDescartar) btnDescartar.style.display = selecionadas.has(id) ? 'block' : 'none';
 
   document.getElementById('popup-overlay').classList.add('open');
+  _verificarPeriodoPopup(id, dataAtual);
 }
 
 function popupAlterarQty(nome, delta) {
@@ -262,7 +284,22 @@ function gerarCotacao() {
   let taxasPorAtiv = [];
 
   sels.forEach(a => {
-    const tipos = a.tipos && a.tipos.length ? a.tipos : [{nome:'Adulto', valor:a.preco||0, sinalModo:'fixo', sinalValor:0}];
+    const _periodoAtivo = _getPeriodoAtivo(a, datasAtiv[a.id]);
+    const tipos = (() => {
+      const base = a.tipos && a.tipos.length ? a.tipos : [{nome:'Adulto', valor:a.preco||0, sinalModo:'fixo', sinalValor:0}];
+      if(!_periodoAtivo) return base;
+      return base.map(t => {
+        const pp = (_periodoAtivo.precos||[]).find(p => p.nome === t.nome);
+        const valorFinal = pp ? pp.valor : t.valor;
+        if(_periodoAtivo.cobrarSinal) {
+          const sp = (_periodoAtivo.sinalPrecos||[]).find(p => p.nome === t.nome);
+          return sp
+            ? {...t, valor: valorFinal, sinalModo: sp.sinalModo, sinalValor: sp.sinalValor}
+            : {...t, valor: valorFinal};
+        }
+        return {...t, valor: valorFinal, sinalValor: 0};
+      });
+    })();
     const qtds  = qtdsAtiv[a.id] || {};
     const tiposAtivos = tipos.filter(t => (qtds[t.nome]||0) > 0);
     const subtotalTipos = tipos.reduce((s,t)=>s+(qtds[t.nome]||0)*t.valor, 0);
@@ -340,6 +377,7 @@ function gerarCotacao() {
     itensHTML += `
       <div class="nota-item">
         <div class="nota-item-name">${esc(a.nome)}
+          ${_periodoAtivo && _periodoAtivo.nome ? `<span class="nota-item-sub" style="color:#856404;font-weight:800">📅 Período: ${esc(_periodoAtivo.nome)}</span>` : ''}
           ${dataPasseio && _ex.dataPorPasseio ? `<span class="nota-item-sub">📅 ${dataPasseio}</span>` : ''}
           ${!temExtrasSel && _ex.qtdPorTipo ? tiposAtivos.map(t=>`<span class="nota-item-sub">${qtds[t.nome]} ${esc(t.nome)} × ${fmtBRL(t.valor)} = ${fmtBRL(qtds[t.nome]*t.valor)}</span>`).join('') : ''}
         </div>
@@ -385,7 +423,7 @@ function gerarCotacao() {
       }
     }
 
-    linhasWpp += `🌊 *${a.nome}*${dataPasseio && _ex.dataPorPasseio ? ` — 📅 ${dataPasseio}` : ''}\n`;
+    linhasWpp += `🌊 *${a.nome}*${dataPasseio && _ex.dataPorPasseio ? ` — 📅 ${dataPasseio}` : ''}${_periodoAtivo && _periodoAtivo.nome ? ` — Período: ${_periodoAtivo.nome}` : ''}\n`;
     if(!temExtrasSel && _ex.qtdPorTipo) {
       tiposAtivos.forEach(t => {
         linhasWpp += `   ${qtds[t.nome]} ${t.nome} × R$ ${fmt(t.valor)} = *R$ ${fmt(qtds[t.nome]*t.valor)}*\n`;
@@ -408,7 +446,7 @@ function gerarCotacao() {
       linhasWpp += '   💰 Total: *R$ ' + fmt(totalExWpp) + '*\n';
       if(sinalExWpp > 0 && _ex.sinalPorPasseio) {
         linhasWpp += '   💳 Sinal: *R$ ' + fmt(sinalExWpp) + '*\n';
-        linhasWpp += '   📅 Restante (a pagar no dia): *R$ ' + fmt(Math.max(0, totalExWpp - sinalExWpp)) + '*\n';
+        linhasWpp += '   📅 A PAGAR NO DIA: *R$ ' + fmt(Math.max(0, totalExWpp - sinalExWpp)) + '*\n';
       }
     }
     if(!subtotalExtras && a.sinalAtivo && sinalAtiv > 0 && _ex.sinalPorPasseio) linhasWpp += `   💳 Sinal: R$ ${fmt(sinalAtiv)}\n`;
@@ -512,10 +550,10 @@ function gerarCotacao() {
     wpp += `🏷️ Desconto geral ${dgLabelWpp} = *− R$ ${fmt(descontoGeralVal)}*\n`;
   }
   wpp += `━━━━━━━━━━━━━━━\n`;
-  wpp += `💰 *TOTAL dos passeios: R$ ${fmt(totalGeral)}*\n`;
+  wpp += `💰 *TOTAL: R$ ${fmt(totalGeral)}*\n`;
   if(totalSinal > 0) {
-    wpp += `💳 *Sinal para confirmar: R$ ${fmt(totalSinal)}*\n`;
-    wpp += `📅 *Restante (a pagar no dia): R$ ${fmt(Math.max(0, totalGeral - totalSinal))}*\n`;
+    wpp += `💳 *SINAL: R$ ${fmt(totalSinal)}*\n`;
+    wpp += `📅 *A PAGAR NO DIA: R$ ${fmt(Math.max(0, totalGeral - totalSinal))}*\n`;
   }
   if(taxasPorAtiv.length > 0) {
     wpp += `\n⚠️ *Taxas pagas no dia:*\n`;

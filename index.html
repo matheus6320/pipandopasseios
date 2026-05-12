@@ -190,6 +190,28 @@
   <div class="panel" id="panel-dashboard">
     <div class="section-title">📈 Dashboard</div>
 
+    <!-- FILTRO -->
+    <div class="filtro-zona" style="margin-bottom:16px">
+      <div class="fnovo-sec-lbl">Período</div>
+      <div class="fnovo-per-toggle">
+        <button class="fnovo-per-btn on" id="dashf-tudo"  onclick="setDashFiltro('tudo')">Tudo</button>
+        <button class="fnovo-per-btn"   id="dashf-hoje"   onclick="setDashFiltro('hoje')">Hoje</button>
+        <button class="fnovo-per-btn"   id="dashf-ontem"  onclick="setDashFiltro('ontem')">Ontem</button>
+      </div>
+      <div class="fnovo-per-toggle" style="margin-top:6px">
+        <button class="fnovo-per-btn"   id="dashf-mes"     onclick="setDashFiltro('mes')">Este mês</button>
+        <button class="fnovo-per-btn"   id="dashf-mes-ant" onclick="setDashFiltro('mes-ant')">Mês passado</button>
+        <button class="fnovo-per-btn"   id="dashf-ano"     onclick="setDashFiltro('ano')">Este ano</button>
+      </div>
+      <div class="fnovo-sec-lbl" style="margin-top:10px">Personalizado</div>
+      <div class="fnovo-per-dates">
+        <input class="fnovo-per-date" type="date" id="dash-f-ini" onchange="setDashFiltroCustom()">
+        <span class="fnovo-per-seta">→</span>
+        <input class="fnovo-per-date" type="date" id="dash-f-fim" onchange="setDashFiltroCustom()">
+      </div>
+      <div id="dash-filter-info" style="display:none;font-size:0.7rem;font-weight:700;color:#856404;margin-top:8px;padding:5px 10px;background:#FFF8E0;border-radius:8px"></div>
+    </div>
+
     <!-- KPIs -->
     <div class="dash-kpi-row">
       <div class="dash-kpi-card">
@@ -404,6 +426,27 @@
               <div class="cfg-toggle-hint">Avisa quando há clientes classificados como Quente ainda pendentes</div>
             </div>
             <label class="cfg-switch"><input type="checkbox" id="notif-quentes"><span class="cfg-slider"></span></label>
+          </div>
+        </div>
+        <div class="section-title" style="margin-top:20px">🕐 Horários agendados</div>
+        <div class="cfg-cot-section">
+          <div class="cfg-toggle-hint" style="padding:4px 0 12px;color:#7A6A5A">
+            O app envia as notificações automaticamente nos horários abaixo, enquanto estiver aberto.
+          </div>
+          <div class="notif-horario-row">
+            <span class="notif-hora-lbl">Horário 1</span>
+            <input type="time" id="notif-hora-1" class="notif-time-input" value="08:00">
+            <label class="cfg-switch"><input type="checkbox" id="notif-hora-1-ativo"><span class="cfg-slider"></span></label>
+          </div>
+          <div class="notif-horario-row">
+            <span class="notif-hora-lbl">Horário 2</span>
+            <input type="time" id="notif-hora-2" class="notif-time-input" value="15:00">
+            <label class="cfg-switch"><input type="checkbox" id="notif-hora-2-ativo"><span class="cfg-slider"></span></label>
+          </div>
+          <div class="notif-horario-row">
+            <span class="notif-hora-lbl">Horário 3</span>
+            <input type="time" id="notif-hora-3" class="notif-time-input" value="19:00">
+            <label class="cfg-switch"><input type="checkbox" id="notif-hora-3-ativo"><span class="cfg-slider"></span></label>
           </div>
         </div>
         <button class="acc-btn-save" id="notif-salvar-btn" style="width:100%;margin-top:16px" onclick="salvarNotifConfigForm()">💾 Salvar</button>
@@ -690,6 +733,9 @@
       </div>
       <input type="hidden" id="popup-data">
     </div>
+    <div id="popup-periodo-aviso" style="display:none;margin-top:8px;padding:8px 12px;background:#FFF8E0;border:1.5px solid #F5C842;border-radius:10px">
+      <div style="font-size:0.68rem;font-weight:900;color:#856404">⚠️ <span id="popup-periodo-nome"></span></div>
+    </div>
     <div class="popup-desc-section" id="popup-desc-section">
       <div class="popup-desc-title"><span style="font-size:0.9rem">🏷️</span> Desconto neste passeio</div>
       <div class="popup-desc-row">
@@ -710,6 +756,21 @@
 </div>
 
   <!-- POPUP RESULTADO -->
+  <!-- POPUP EDITAR / NOVA ATIVIDADE -->
+  <div class="popup-overlay" id="popup-ativ-overlay" onclick="if(event.target===this)fecharPopupAtividade()">
+    <div class="popup-ativ-box">
+      <div class="popup-ativ-header">
+        <span class="popup-ativ-title" id="popup-ativ-title">Editar atividade</span>
+        <button class="popup-ativ-close" onclick="fecharPopupAtividade()">✕</button>
+      </div>
+      <div class="popup-ativ-content" id="popup-ativ-content"></div>
+      <div class="popup-ativ-footer">
+        <button class="acc-btn-del" id="popup-ativ-del-btn" onclick="_deletarPopupAtiv()">🗑 Remover</button>
+        <button class="acc-btn-save" id="popup-ativ-save-btn" onclick="salvarPopupAtividade()">💾 Salvar</button>
+      </div>
+    </div>
+  </div>
+
   <div class="popup-resultado-overlay" id="popup-resultado-overlay">
     <div class="popup-resultado-box">
       <div class="popup-resultado-header">

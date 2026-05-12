@@ -55,6 +55,7 @@ function confirmarCalPasseio() {
     const disp = document.getElementById('popup-data-display');
     disp.textContent = fmtDataDisplay(dataStr);
     disp.style.color = 'var(--dark)';
+    _verificarPeriodoPopup(popupAtivId, dataStr);
   }
   document.getElementById('cal-passeio-overlay').classList.remove('open');
   calPasseioAberto = false;
@@ -66,6 +67,7 @@ function limparCalPasseio() {
   const disp = document.getElementById('popup-data-display');
   disp.textContent = 'Selecionar data';
   disp.style.color = '#B0A090';
+  _verificarPeriodoPopup(popupAtivId, '');
   renderCalPasseio();
 }
 

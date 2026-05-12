@@ -1153,6 +1153,21 @@
     font-weight: 900; cursor: pointer; transition: opacity 0.15s;
   }
   .notif-pedir-btn:hover { opacity: 0.88; }
+  .notif-horario-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 0; border-bottom: 1px solid #F0E8E0;
+  }
+  .notif-horario-row:last-child { border-bottom: none; }
+  .notif-hora-lbl {
+    font-size: 0.72rem; font-weight: 700; color: #7A6A5A;
+    min-width: 68px;
+  }
+  .notif-time-input {
+    flex: 1; border: 1.5px solid #E0D4C8; border-radius: 8px;
+    padding: 7px 10px; font-family: 'Montserrat', sans-serif;
+    font-size: 0.8rem; font-weight: 700; color: var(--dark);
+    background: #FFF8F3;
+  }
 
   /* ===== CONFIG SUB-NAVEGAÇÃO ===== */
   .cfg-subnav {
@@ -1842,9 +1857,47 @@
   .popup-overlay {
     display: none; position: fixed; inset: 0;
     background: rgba(0,0,0,0.45); z-index: 1000;
-    align-items: center; justify-content: center;
+    align-items: flex-end; justify-content: center;
   }
   .popup-overlay.open { display: flex; }
+
+  /* Popup Atividade */
+  .popup-ativ-box {
+    background: white; border-radius: 20px 20px 0 0;
+    width: 100%; max-width: 520px;
+    max-height: 90vh; display: flex; flex-direction: column;
+    box-shadow: 0 -4px 30px rgba(0,0,0,0.18);
+  }
+  .popup-ativ-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 18px 14px; border-bottom: 1.5px solid #F5DDB8; flex-shrink: 0;
+  }
+  .popup-ativ-title {
+    font-size: 0.88rem; font-weight: 900; color: var(--dark);
+  }
+  .popup-ativ-close {
+    background: #F5EDE0; border: none; border-radius: 50%;
+    width: 30px; height: 30px; font-size: 0.85rem; cursor: pointer;
+    color: var(--mid); font-weight: 900; display: flex; align-items: center; justify-content: center;
+  }
+  .popup-ativ-content {
+    overflow-y: auto; flex: 1; padding: 4px 0;
+  }
+  .popup-ativ-footer {
+    display: flex; gap: 10px; padding: 12px 16px;
+    border-top: 1.5px solid #F5DDB8; flex-shrink: 0;
+  }
+  .popup-ativ-footer .acc-btn-save { flex: 2; }
+  .popup-ativ-footer .acc-btn-del  { flex: 1; }
+
+  /* Períodos especiais */
+  .acc-periodo-box {
+    background: #F0F7FF; border: 1.5px solid #B5D4F4;
+    border-radius: 10px; padding: 10px 12px; margin-bottom: 10px;
+  }
+  .acc-periodo-header {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 4px;
+  }
   .popup-box {
     background: white; border-radius: var(--radius);
     padding: 24px 22px; width: 92%; max-width: 400px;
