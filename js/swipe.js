@@ -1,6 +1,6 @@
 // ===== SWIPE CARDS =====
 (function() {
-  var THRESHOLD   = 160;
+  var THRESHOLD_RATIO = 0.55; // % do painel para confirmar o swipe
   var SNAP_DELETE = 88;
   var SNAP_STATUS = 224;
 
@@ -10,11 +10,19 @@
     document.querySelectorAll('.rel-card[data-cot-id]').forEach(function(card) {
       if(card.dataset.swipeInit) return;
       card.dataset.swipeInit = '1';
-      _bind(card);
+      _bind(card, SNAP_DELETE, SNAP_STATUS);
     });
   }
 
-  function _bind(card) {
+  function initSwipeAtividades() {
+    document.querySelectorAll('.acc-item[data-aid]').forEach(function(card) {
+      if(card.dataset.swipeInit) return;
+      card.dataset.swipeInit = '1';
+      _bind(card, SNAP_DELETE, SNAP_DELETE);
+    });
+  }
+
+  function _bind(card, snapRight, snapLeft) {
     var startX, startY, dx, isH, dragging;
 
     function start(x, y) {
@@ -40,8 +48,8 @@
       }
 
       dx = dxNow < 0
-        ? Math.max(dxNow, -(SNAP_DELETE + 12))
-        : Math.min(dxNow,  (SNAP_STATUS + 12));
+        ? Math.max(dxNow, -(snapLeft + 12))
+        : Math.min(dxNow,  (snapRight + 12));
 
       card.style.transform = 'translateX(' + dx + 'px)';
     }
@@ -56,18 +64,20 @@
         return;
       }
 
-      if(dx < -THRESHOLD) {
-        card.style.transform = 'translateX(-' + SNAP_STATUS + 'px)';
+      var thL = snapLeft  * THRESHOLD_RATIO;
+      var thR = snapRight * THRESHOLD_RATIO;
+
+      if(dx < -thL) {
+        card.style.transform = 'translateX(-' + snapLeft + 'px)';
         _activeCard = card;
-      } else if(dx > THRESHOLD) {
-        card.style.transform = 'translateX(' + SNAP_DELETE + 'px)';
+      } else if(dx > thR) {
+        card.style.transform = 'translateX(' + snapRight + 'px)';
         _activeCard = card;
       } else {
         _snap(card); _activeCard = null;
       }
     }
 
-    // Touch
     card.addEventListener('touchstart', function(e) {
       start(e.touches[0].clientX, e.touches[0].clientY);
     }, { passive: true });
@@ -79,7 +89,6 @@
 
     card.addEventListener('touchend', end);
 
-    // Mouse
     card.addEventListener('mousedown', function(e) {
       start(e.clientX, e.clientY);
       function onMove(e) { move(e.clientX, e.clientY); }
@@ -94,6 +103,7 @@
     card.style.transform = 'translateX(0)';
   }
 
-  window.initSwipeCards     = initSwipeCards;
-  window.fecharSwipeAtivo   = function() { if(_activeCard) { _snap(_activeCard); _activeCard = null; } };
+  window.initSwipeCards      = initSwipeCards;
+  window.initSwipeAtividades = initSwipeAtividades;
+  window.fecharSwipeAtivo    = function() { if(_activeCard) { _snap(_activeCard); _activeCard = null; } };
 })();

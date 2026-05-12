@@ -138,24 +138,49 @@ function renderConfig() {
 
     const precoSummary = a.tipos.map(t => `${esc(t.nome)}: R$ ${(t.valor||0).toFixed(0)}`).join(' · ');
 
+    const wrap = document.createElement('div');
+    wrap.className = 'swipe-wrap-ativ';
+
+    const delPanel = document.createElement('div');
+    delPanel.className = 'swipe-action-left';
+    delPanel.style.cssText = 'cursor:pointer';
+    delPanel.innerHTML = '<span class="swipe-del-icon">🗑</span><span class="swipe-del-txt">Excluir</span>';
+    delPanel.onclick = (function(aid){ return function(){ _swipeAtivExcluir(aid); }; })(a.id);
+
+    const editPanel = document.createElement('div');
+    editPanel.className = 'swipe-ativ-edit';
+    editPanel.innerHTML = '<span style="font-size:1.4rem">✏️</span><span class="swipe-del-txt">Editar</span>';
+    editPanel.onclick = (function(aid){ return function(){ _swipeAtivEditar(aid); }; })(a.id);
+
     const card = document.createElement('div');
     card.className = 'acc-item';
+    card.dataset.aid = a.id;
     card.innerHTML = `
       <div class="acc-header" id="acc-hdr-${a.id}">
         <div class="acc-header-left">
-          <div>
-            <div style="display:flex;align-items:center;gap:6px">
-              <span class="acc-nome">${esc(a.nome)}</span>
-              ${a.sinalAtivo ? '<span class="acc-badge" style="background:#E1F5EE;color:#0F6E56">sinal</span>' : ''}
-            </div>
-            <div style="font-size:0.6rem;color:var(--mid);font-weight:700;margin-top:2px">${precoSummary}</div>
-          </div>
+          <span class="acc-nome">${esc(a.nome)}</span>
         </div>
         <button class="acc-edit-btn" data-aid="${a.id}" onclick="abrirPopupAtividade(this.dataset.aid)">✏️ Editar</button>
       </div>
     `;
-    list.appendChild(card);
+
+    wrap.appendChild(delPanel);
+    wrap.appendChild(editPanel);
+    wrap.appendChild(card);
+    list.appendChild(wrap);
   });
+
+  setTimeout(initSwipeAtividades, 0);
+}
+
+function _swipeAtivEditar(aid) {
+  fecharSwipeAtivo();
+  abrirPopupAtividade(aid);
+}
+
+function _swipeAtivExcluir(aid) {
+  fecharSwipeAtivo();
+  removerAtividade(aid);
 }
 
 // ===== FORMULÁRIO INTERNO =====

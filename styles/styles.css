@@ -429,7 +429,19 @@
 
   /* ACCORDION CONFIG */
   .acc-wrap { display: flex; flex-direction: column; gap: 0; border: 1.5px solid #F5DDB8; border-radius: 12px; overflow: hidden; }
-  .acc-item { border-bottom: 1.5px solid #F5DDB8; }
+  .swipe-wrap-ativ {
+    position: relative; overflow: hidden;
+    border-bottom: 1.5px solid #F5DDB8;
+  }
+  .swipe-wrap-ativ:last-child { border-bottom: none; }
+  .swipe-ativ-edit {
+    position: absolute; right: 0; top: 0; bottom: 0; width: 88px;
+    background: var(--ocean); display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 5px;
+    cursor: pointer; z-index: 0; color: white;
+    font-family: 'Montserrat', sans-serif;
+  }
+  .acc-item { border-bottom: none; position: relative; z-index: 1; }
   .acc-item:last-child { border-bottom: none; }
   .acc-header {
     display: flex; align-items: center; justify-content: space-between;
