@@ -1,24 +1,30 @@
 // ===== INIT =====
-carregarAtividadesDB().then(() => {
-  renderConfig();
-  renderSelectGrid();
-}).catch(() => {
-  carregar();
-  renderConfig();
-  renderSelectGrid();
+inicializarAuth().then(() => {
+  if(!_sessaoAtual) return;
+  _carregarSistema();
 });
 
-carregarCotacoesDB().then(() => {
-  atualizarBadge();
-  renderRelatorio();
-  renderHome();
-  // Pede permissão na primeira abertura e verifica notificações
-  if(statusPermissao() === 'default') {
-    setTimeout(pedirPermissaoNotificacoes, 3000);
-  } else {
-    verificarNotificacoes();
-    iniciarAgendamento();
-  }
-}).catch(() => {
-  atualizarBadge();
-});
+function _carregarSistema() {
+  carregarAtividadesDB().then(() => {
+    renderConfig();
+    renderSelectGrid();
+  }).catch(() => {
+    carregar();
+    renderConfig();
+    renderSelectGrid();
+  });
+
+  carregarCotacoesDB().then(() => {
+    atualizarBadge();
+    renderRelatorio();
+    renderHome();
+    if(statusPermissao() === 'default') {
+      setTimeout(pedirPermissaoNotificacoes, 3000);
+    } else {
+      verificarNotificacoes();
+      iniciarAgendamento();
+    }
+  }).catch(() => {
+    atualizarBadge();
+  });
+}

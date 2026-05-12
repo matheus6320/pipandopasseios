@@ -81,6 +81,72 @@
     text-transform: uppercase;
   }
 
+  /* ===== LOGIN ===== */
+  #login-overlay {
+    display: none; position: fixed; inset: 0; z-index: 9999;
+    background: linear-gradient(160deg, #FFF8F0 0%, #FFE8C8 100%);
+    align-items: center; justify-content: center; flex-direction: column;
+  }
+  #login-overlay.ativo { display: flex; }
+  .login-box {
+    background: white; border-radius: 20px; padding: 36px 28px;
+    width: 92%; max-width: 360px; box-shadow: 0 8px 40px rgba(0,0,0,0.12);
+    display: flex; flex-direction: column; align-items: center; gap: 12px;
+  }
+  .login-logo-img { width: 90px; height: 90px; object-fit: contain; border-radius: 18px; }
+  .login-title { font-size: 1.1rem; font-weight: 900; color: var(--dark); margin-top: 4px; }
+  .login-sub { font-size: 0.72rem; font-weight: 700; color: var(--mid); margin-bottom: 8px; }
+  .login-input {
+    width: 100%; box-sizing: border-box;
+    border: 1.5px solid #E0D4C8; border-radius: 10px;
+    padding: 12px 14px; font-family: 'Montserrat', sans-serif;
+    font-size: 0.85rem; font-weight: 600; color: var(--dark);
+    outline: none; transition: border-color 0.15s;
+  }
+  .login-input:focus { border-color: var(--ocean); }
+  .login-erro {
+    font-size: 0.7rem; font-weight: 700; color: #C03030;
+    min-height: 16px; text-align: center;
+  }
+  .login-btn {
+    width: 100%; padding: 13px; border: none; border-radius: 12px;
+    background: var(--grad); color: white;
+    font-family: 'Montserrat', sans-serif; font-size: 0.85rem;
+    font-weight: 900; cursor: pointer; transition: opacity 0.15s;
+    margin-top: 4px;
+  }
+  .login-btn:disabled { opacity: 0.6; cursor: default; }
+  .login-forgot {
+    background: none; border: none; color: var(--ocean);
+    font-family: 'Montserrat', sans-serif; font-size: 0.72rem;
+    font-weight: 700; cursor: pointer; text-decoration: underline;
+    padding: 2px 0; opacity: 0.8;
+  }
+  .login-forgot:hover { opacity: 1; }
+  .btn-usuario {
+    background: rgba(255,255,255,0.18); border: 1.5px solid rgba(255,255,255,0.4);
+    border-radius: 8px; color: white; font-family: 'Montserrat', sans-serif;
+    font-size: 0.7rem; font-weight: 800; padding: 5px 11px;
+    cursor: pointer; transition: background 0.15s; white-space: nowrap;
+  }
+  .btn-usuario:hover { background: rgba(255,255,255,0.3); }
+  .painel-email-atual {
+    font-size: 0.78rem; font-weight: 700; color: var(--dark);
+    background: #F5EDE0; border-radius: 8px; padding: 9px 12px;
+    margin-bottom: 2px;
+  }
+  .painel-msg {
+    font-size: 0.68rem; font-weight: 700; min-height: 18px;
+    margin: 6px 0 4px; padding: 0 2px;
+  }
+  .btn-sair {
+    background: none; border: 1.5px solid rgba(255,255,255,0.5);
+    border-radius: 8px; color: white; font-family: 'Montserrat', sans-serif;
+    font-size: 0.7rem; font-weight: 800; padding: 5px 11px;
+    cursor: pointer; opacity: 0.85; transition: opacity 0.15s;
+  }
+  .btn-sair:hover { opacity: 1; }
+
   /* TABS */
   .tabs {
     display: flex;
@@ -145,8 +211,8 @@
 
 
   /* CARD KANBAN */
-  .rk-header{padding:10px 14px;background:rgba(255,255,255,0.6);border-bottom:1px solid #F5DDB8;display:flex;align-items:center;gap:10px;cursor:pointer;}
-  .rk-header:hover{background:rgba(255,240,210,0.7);}
+  .rk-header{padding:10px 14px;background:rgba(255,255,255,0.5);border-bottom:1px solid #DCDCDC;display:flex;align-items:center;gap:10px;cursor:pointer;}
+  .rk-header:hover{background:rgba(255,255,255,0.8);}
   .rk-bar{width:4px;border-radius:2px;align-self:stretch;flex-shrink:0;min-height:32px;}
   .rk-bar.vermelho{background:#E57373;} .rk-bar.amarelo{background:#FFB300;} .rk-bar.verde{background:#43A047;} .rk-bar.sem-data{background:#C0B090;}
   .rk-hinfo{flex:1;min-width:0;}
@@ -157,6 +223,7 @@
   .temp-pill-quente{background:#FFEAEA;color:#C0272D;}
   .rk-wpp{font-size:0.68rem;color:var(--mid);font-weight:700;margin-top:2px;}
   .rk-hright{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;}
+  .rk-criado{font-size:0.58rem;font-weight:700;color:#B0A090;white-space:nowrap;}
   .rk-total{font-size:0.88rem;font-weight:900;color:var(--ocean);}
   .rk-badges{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end;}
   .rk-grid{display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid #F5DDB8;}
@@ -289,9 +356,9 @@
   .fnovo-sec-lbl { font-size: 0.58rem; font-weight: 900; color: #B08060; text-transform: uppercase; letter-spacing: .4px; margin-bottom: 6px; }
 
   /* URGÊNCIA */
-  .rel-card.urg-vermelho { background: #FFF0F0; border-color: #FFCDD2; }
-  .rel-card.urg-amarelo  { background: #FFFBF0; border-color: #FFE082; }
-  .rel-card.urg-verde    { background: #F0FFF6; border-color: #A5D6A7; }
+  .rel-card.urg-vermelho { background: #FFF0F0; }
+  .rel-card.urg-amarelo  { background: #FFFBF0; }
+  .rel-card.urg-verde    { background: #F0FFF6; }
   .urg-pill {
     font-size: 0.58rem; font-weight: 900; padding: 2px 8px;
     border-radius: 20px; white-space: nowrap; flex-shrink: 0;
@@ -1601,14 +1668,55 @@
   }
 
   /* RELATÓRIO */
-  .rel-card {
-    border: 2px solid var(--light);
+  /* Swipe wrap */
+  .swipe-wrap {
+    position: relative; overflow: hidden;
     border-radius: var(--radius);
+    border: 2px solid #E4E4E4;
     margin-bottom: 14px;
-    overflow: hidden;
     transition: border-color 0.2s;
   }
-  .rel-card:hover { border-color: #FFD89A; }
+  .swipe-wrap:hover { border-color: #FFD89A; }
+  .swipe-wrap.urg-vermelho { border-color: #FFCDD2; }
+  .swipe-wrap.urg-amarelo  { border-color: #FFE082; }
+  .swipe-wrap.urg-verde    { border-color: #A5D6A7; }
+
+  /* Painéis de ação */
+  .swipe-action-left {
+    position: absolute; left: 0; top: 0; bottom: 0; width: 88px;
+    background: #FF3B30; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 5px;
+    cursor: pointer; z-index: 0; color: white;
+    font-family: 'Montserrat', sans-serif;
+  }
+  .swipe-status-btn {
+    flex: 1; border: none; cursor: pointer;
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; gap: 4px;
+    font-family: 'Montserrat', sans-serif; font-size: 0.55rem; font-weight: 900;
+  }
+  .swipe-status-btn span.icon { font-size: 1.1rem; }
+  .swipe-status-btn.s-pendente  { background: #FFF8E0; color: #856404; }
+  .swipe-status-btn.s-retornado { background: #E8F5E9; color: #1A6A3A; }
+  .swipe-status-btn.s-fechado   { background: #E3F2FD; color: #0D47A1; }
+  .swipe-status-btn.s-perdido   { background: #FFEBEE; color: #B71C1C; }
+
+  .swipe-action-right {
+    position: absolute; right: 0; top: 0; bottom: 0; width: 224px;
+    display: flex; align-items: stretch; z-index: 0;
+  }
+  .swipe-del-icon { font-size: 1.4rem; }
+  .swipe-del-txt  { font-size: 0.62rem; font-weight: 900; }
+
+  .rel-card {
+    background: #F2F2F2;
+    border: none;
+    border-radius: 0;
+    margin-bottom: 0;
+    overflow: hidden;
+    position: relative; z-index: 1;
+    transition: border-color 0.2s;
+  }
   .rel-card-header {
     background: var(--light);
     padding: 12px 16px;
@@ -1881,7 +1989,7 @@
     color: var(--mid); font-weight: 900; display: flex; align-items: center; justify-content: center;
   }
   .popup-ativ-content {
-    overflow-y: auto; flex: 1; padding: 4px 0;
+    overflow-y: auto; flex: 1; padding: 4px 16px 12px;
   }
   .popup-ativ-footer {
     display: flex; gap: 10px; padding: 12px 16px;

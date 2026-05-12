@@ -591,6 +591,7 @@ function gerarCotacao() {
     textoWpp: wpp,
     notaHtml: notaHtml,
     dataStr,
+    criadoPor: (typeof _sessaoAtual !== 'undefined' && _sessaoAtual?.user?.user_metadata?.nome) || '',
     temperatura: temperaturaCliente,
     origem: origemCliente,
     descontosPasseios: sels.map(a => { const d = descontosAtiv[a.id]||{modo:'pct',valor:0}; return {nome:a.nome,modo:d.modo,valor:d.valor}; }),

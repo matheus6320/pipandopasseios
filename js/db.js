@@ -1,9 +1,10 @@
 // ===== SUPABASE REST =====
 async function sbFetch(path, options = {}) {
+  const token = (typeof getAuthToken === 'function') ? getAuthToken() : SUPABASE_KEY;
   const res = await fetch(SUPABASE_URL + '/rest/v1/' + path, {
     headers: {
       'apikey': SUPABASE_KEY,
-      'Authorization': 'Bearer ' + SUPABASE_KEY,
+      'Authorization': 'Bearer ' + token,
       'Content-Type': 'application/json',
       'Prefer': options.prefer || ''
     },

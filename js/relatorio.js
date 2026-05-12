@@ -498,7 +498,18 @@ function renderRelatorio() {
       }).join('');
     })();
     return `
-    <div class="rel-card urg-${urgCls}" id="relcard-${c.id}">
+    <div class="swipe-wrap urg-${urgCls}" id="swipe-wrap-${c.id}">
+      <div class="swipe-action-left" onclick="_swipeExcluir('${c.id}')">
+        <span class="swipe-del-icon">🗑</span>
+        <span class="swipe-del-txt">Excluir</span>
+      </div>
+      <div class="swipe-action-right">
+        <button class="swipe-status-btn s-pendente"  onclick="_swipeStatus('${c.id}','pendente')"><span class="icon">⏳</span>Pendente</button>
+        <button class="swipe-status-btn s-retornado" onclick="_swipeStatus('${c.id}','retornado')"><span class="icon">✅</span>Retornado</button>
+        <button class="swipe-status-btn s-fechado"   onclick="_swipeStatus('${c.id}','fechado')"><span class="icon">🤝</span>Fechado</button>
+        <button class="swipe-status-btn s-perdido"   onclick="_swipeStatus('${c.id}','perdido')"><span class="icon">❌</span>Perdido</button>
+      </div>
+    <div class="rel-card urg-${urgCls}" id="relcard-${c.id}" data-cot-id="${c.id}">
       <div class="rk-header" onclick="toggleRelCard('${c.id}')">
         <div class="rk-bar ${urgCls}"></div>
         <div class="rk-hinfo">
@@ -514,6 +525,7 @@ function renderRelatorio() {
           </div>
         </div>
         <div class="rk-hright">
+          <div class="rk-criado">Criado: ${c.dataStr||''}${c.criadoPor ? ' · ' + c.criadoPor : ''}</div>
           <div class="rk-total">${fmtBRL(c.total)}</div>
           <div class="rk-badges">
             ${_fuChip(c)}
@@ -568,8 +580,11 @@ function renderRelatorio() {
         </div>
       </div>
     </div>
+    </div>
   `;
   }).join('') + _renderPaginacao(_paginaAtual, _totalPags, cots.length);
+
+  setTimeout(initSwipeCards, 0);
 }
 
 function _renderPaginacao(pagAtual, totalPags, totalItens) {
@@ -761,6 +776,37 @@ async function copiarMidia(cotId, nomePasseio, link, btn) {
     await navigator.clipboard.writeText(txt);
     flashBtn(btn, '✅ Copiado!');
   } catch { alert('Copie manualmente:\n\n' + txt); }
+}
+
+function _swipeStatus(id, status) {
+  fecharSwipeAtivo();
+  if(status === 'perdido') { _abrirModalMotivo(id); return; }
+  const cots = carregarCotacoes();
+  const c = cots.find(x => x.id === id);
+  if(!c) return;
+  c.status = status;
+  c.motivoPerda = null;
+  salvarCotacoes(cots);
+  atualizarCotacaoDB(id, c).catch(console.error);
+  renderRelatorio();
+}
+
+function _swipeExcluir(id) {
+  fecharSwipeAtivo();
+  const cots = carregarCotacoes().filter(c => c.id !== id);
+  salvarCotacoes(cots);
+  excluirCotacaoDB(id).catch(console.error);
+  atualizarBadge();
+  const wrap = document.getElementById('swipe-wrap-' + id);
+  if(wrap) {
+    wrap.style.transition = 'opacity 0.25s, max-height 0.3s';
+    wrap.style.opacity = '0';
+    wrap.style.maxHeight = wrap.offsetHeight + 'px';
+    setTimeout(() => { wrap.style.maxHeight = '0'; wrap.style.marginBottom = '0'; }, 50);
+    setTimeout(() => { renderRelatorio(); }, 350);
+  } else {
+    renderRelatorio();
+  }
 }
 
 function excluirCotacao(id) {

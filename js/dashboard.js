@@ -1,11 +1,18 @@
 // ===== DASHBOARD =====
 
 const _dashCharts = {};
-var _dashFiltro = 'tudo';
+var _dashFiltro            = 'tudo';
+var _dashFiltroPeriodoTipo = 'cotacao';
+var _dashFiltroPasseios    = new Set();
+var _dashFiltroOrigem      = new Set();
+
+// ===== FILTROS =====
 
 function setDashFiltro(tipo) {
   _dashFiltro = tipo;
-  document.querySelectorAll('#panel-dashboard .fnovo-per-btn').forEach(b => b.classList.remove('on'));
+  ['dashf-tudo','dashf-hoje','dashf-ontem','dashf-mes','dashf-mes-ant','dashf-ano'].forEach(id => {
+    const b = document.getElementById(id); if(b) b.classList.remove('on');
+  });
   const btn = document.getElementById('dashf-' + tipo);
   if(btn) btn.classList.add('on');
   const ini = document.getElementById('dash-f-ini');
@@ -15,58 +22,139 @@ function setDashFiltro(tipo) {
   renderDashboard();
 }
 
-function setDashFiltroCustom() {
-  _dashFiltro = 'custom';
-  document.querySelectorAll('.dash-fchip').forEach(b => b.classList.remove('ativo'));
+function setDashTipoPeriodo(tipo) {
+  _dashFiltroPeriodoTipo = tipo;
+  const bc = document.getElementById('dash-fper-cot');
+  const bp = document.getElementById('dash-fper-pas');
+  if(bc) bc.classList.toggle('on', tipo === 'cotacao');
+  if(bp) bp.classList.toggle('on', tipo === 'passeio');
+}
+
+function _renderDashPasseiosChips() {
+  const wrap = document.getElementById('dash-f-passeios-chips');
+  if(!wrap) return;
+  const nomes = new Set();
+  carregarCotacoes().forEach(c => (c.passeios||[]).forEach(p => nomes.add(p)));
+  wrap.innerHTML = '';
+  if(!nomes.size) { wrap.innerHTML = '<span style="font-size:0.62rem;color:var(--mid)">Nenhum passeio cadastrado</span>'; return; }
+  nomes.forEach(nome => {
+    const chip = document.createElement('button');
+    chip.className = 'filtro-passeio-chip' + (_dashFiltroPasseios.has(nome) ? ' ativo' : '');
+    chip.textContent = nome;
+    chip.onclick = () => {
+      if(_dashFiltroPasseios.has(nome)) _dashFiltroPasseios.delete(nome);
+      else _dashFiltroPasseios.add(nome);
+      chip.classList.toggle('ativo');
+    };
+    wrap.appendChild(chip);
+  });
+}
+
+function _renderDashOrigemChips() {
+  const wrap = document.getElementById('dash-f-origem-chips');
+  if(!wrap) return;
+  wrap.innerHTML = '';
+  Object.entries(ORIGEM_LABELS).forEach(([k, label]) => {
+    const chip = document.createElement('button');
+    chip.className = 'filtro-passeio-chip' + (_dashFiltroOrigem.has(k) ? ' ativo' : '');
+    chip.textContent = label;
+    chip.onclick = () => {
+      if(_dashFiltroOrigem.has(k)) _dashFiltroOrigem.delete(k);
+      else _dashFiltroOrigem.add(k);
+      chip.classList.toggle('ativo');
+    };
+    wrap.appendChild(chip);
+  });
+}
+
+function limparFiltrosDash() {
+  _dashFiltro = 'tudo';
+  _dashFiltroPeriodoTipo = 'cotacao';
+  _dashFiltroPasseios = new Set();
+  _dashFiltroOrigem   = new Set();
+  ['dashf-tudo','dashf-hoje','dashf-ontem','dashf-mes','dashf-mes-ant','dashf-ano'].forEach(id => {
+    const b = document.getElementById(id); if(b) b.classList.remove('on');
+  });
+  const btnTudo = document.getElementById('dashf-tudo');
+  if(btnTudo) btnTudo.classList.add('on');
+  setDashTipoPeriodo('cotacao');
+  const ini = document.getElementById('dash-f-ini');
+  const fim = document.getElementById('dash-f-fim');
+  if(ini) ini.value = '';
+  if(fim) fim.value = '';
+  _renderDashPasseiosChips();
+  _renderDashOrigemChips();
+  renderDashboard();
+}
+
+function aplicarFiltrosDash() {
+  const ini = document.getElementById('dash-f-ini')?.value || '';
+  const fim = document.getElementById('dash-f-fim')?.value || '';
+  if(ini || fim) _dashFiltro = 'custom';
   renderDashboard();
 }
 
 function _filtrarCotsDash(cots) {
   const hoje = new Date();
-  if(_dashFiltro === 'tudo') return cots;
+  let result = cots;
+
   if(_dashFiltro === 'hoje') {
     const ymd = hoje.toISOString().slice(0, 10);
-    return cots.filter(c => c.data && c.data.slice(0, 10) === ymd);
-  }
-  if(_dashFiltro === 'ontem') {
+    result = result.filter(c => c.data && c.data.slice(0, 10) === ymd);
+  } else if(_dashFiltro === 'ontem') {
     const ontem = new Date(hoje); ontem.setDate(ontem.getDate() - 1);
-    const ymd = ontem.toISOString().slice(0, 10);
-    return cots.filter(c => c.data && c.data.slice(0, 10) === ymd);
-  }
-  if(_dashFiltro === 'mes') {
+    result = result.filter(c => c.data && c.data.slice(0, 10) === ontem.toISOString().slice(0, 10));
+  } else if(_dashFiltro === 'mes') {
     const ym = hoje.getFullYear() + '-' + String(hoje.getMonth() + 1).padStart(2, '0');
-    return cots.filter(c => c.data && c.data.slice(0, 7) === ym);
-  }
-  if(_dashFiltro === 'mes-ant') {
+    result = result.filter(c => c.data && c.data.slice(0, 7) === ym);
+  } else if(_dashFiltro === 'mes-ant') {
     const d = new Date(hoje.getFullYear(), hoje.getMonth() - 1, 1);
     const ym = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
-    return cots.filter(c => c.data && c.data.slice(0, 7) === ym);
-  }
-  if(_dashFiltro === 'ano') {
-    const y = String(hoje.getFullYear());
-    return cots.filter(c => c.data && c.data.slice(0, 4) === y);
-  }
-  if(_dashFiltro === 'custom') {
+    result = result.filter(c => c.data && c.data.slice(0, 7) === ym);
+  } else if(_dashFiltro === 'ano') {
+    result = result.filter(c => c.data && c.data.slice(0, 4) === String(hoje.getFullYear()));
+  } else if(_dashFiltro === 'custom') {
     const ini = document.getElementById('dash-f-ini')?.value || '';
     const fim = document.getElementById('dash-f-fim')?.value || '';
-    return cots.filter(c => {
-      if(!c.data) return false;
-      const cd = c.data.slice(0, 10);
-      if(ini && cd < ini) return false;
-      if(fim && cd > fim) return false;
-      return true;
-    });
+    if(ini || fim) {
+      result = result.filter(c => {
+        if(_dashFiltroPeriodoTipo === 'passeio') {
+          const datasP = (c.datasPasseios||[]).filter(dp => dp.data).map(dp => {
+            const p = dp.data.split('/');
+            return p.length === 3 ? `${p[2]}-${p[1]}-${p[0]}` : '';
+          }).filter(Boolean);
+          if(!datasP.length) return false;
+          const min = datasP.sort()[0];
+          if(ini && min < ini) return false;
+          if(fim && min > fim) return false;
+          return true;
+        } else {
+          if(!c.data) return false;
+          const cd = c.data.slice(0, 10);
+          if(ini && cd < ini) return false;
+          if(fim && cd > fim) return false;
+          return true;
+        }
+      });
+    }
   }
-  return cots;
+
+  if(_dashFiltroPasseios.size > 0)
+    result = result.filter(c => (c.passeios||[]).some(p => _dashFiltroPasseios.has(p)));
+
+  if(_dashFiltroOrigem.size > 0)
+    result = result.filter(c => _dashFiltroOrigem.has(c.origem));
+
+  return result;
 }
 
 function _atualizarInfoFiltro(total, filtrado) {
   const el = document.getElementById('dash-filter-info');
   if(!el) return;
-  if(_dashFiltro === 'tudo') { el.style.display = 'none'; return; }
+  const temFiltro = _dashFiltro !== 'tudo' || _dashFiltroPasseios.size > 0 || _dashFiltroOrigem.size > 0;
+  if(!temFiltro) { el.style.display = 'none'; return; }
   el.style.display = 'block';
-  const labels = { hoje: 'hoje', ontem: 'ontem', mes: 'este mês', 'mes-ant': 'mês passado', ano: 'este ano', custom: 'período personalizado' };
-  el.textContent = `🔎 Exibindo ${filtrado} de ${total} cotações — ${labels[_dashFiltro] || ''}`;
+  el.textContent = `🔎 Exibindo ${filtrado} de ${total} cotações`;
 }
 
 function _destroyChart(key) {
@@ -77,6 +165,8 @@ function renderDashboard() {
   const todasCots = carregarCotacoes();
   const cots = _filtrarCotsDash(todasCots);
   _atualizarInfoFiltro(todasCots.length, cots.length);
+  _renderDashPasseiosChips();
+  _renderDashOrigemChips();
   _renderKPIs(cots);
   _renderChartPasseios(cots);
   _renderChartStatus(cots);
